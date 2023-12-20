@@ -1,37 +1,61 @@
 import express from "express";
 import dotenv from "dotenv";
-import { Server } from "socket.io";
+import morgan from "morgan";
+import cors from "cors";
+
+import http from "http";
+import { Server as SocketIo } from "socket.io";
+
 import connectDB from "./config/db.js";
-import Chat from "./models/chat.js";
 dotenv.config();
 
 const app = express();
-connectDB();
+const server = http.createServer(app);
+const io = new SocketIo(server, {
+	cors: {
+		origin: "http://localhost:3000",
+		methods: ["GET", "POST"],
+		credentials: true,
+	},
+});
 
-app.set('view engine', 'ejs')
+connectDB();
+// app.set('view engine', 'ejs')
+app.use(morgan("dev"));
+app.use(
+	cors({
+		origin: "http://localhost:3000", // origin(s) i want to allow
+		methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+		credentials: true, // Enable cookies and credentials for cross-origin requests
+	})
+);
 
 app.get("/", async (req, res) => {
 	console.log("hi");
 	res.status(200).json({ message: "success" });
 });
 
-const PORT = process.env.PORT || 8000;
-const expressServer = app.listen(PORT, () => {
-	console.log(`server is runnig on port ${PORT}`);
+io.on("connection", (socket) => {
+	// console.log(socket);
+	console.log(`A user is connected. Socket ID: ${socket.id}`);
+	console.log(`WebSocket URL: ${socket.handshake.url}`);
+	console.log("A user is connected");
+
+	// Listen for messages from the client
+	socket.on("message", (data) => {
+		console.log("Message from client:", data);
+
+		// Broadcast the message to all connected clients
+		io.emit("message", data);
+	});
+
+	// Handle disconnection
+	socket.on("disconnect", () => {
+		console.log("User disconnected");
+	});
 });
 
-
-
-const io = new Server(expressServer);
-io.on('connection',(socket)=>{
-    socket.emit("chat-message","connected to socker io 'chat-message'");
-
-    // socket.on or io.on means get data
-    io.on('event', data => { 
-        console.log("hello world");
-    });
-
-    io.on('disconnect',()=>{
-        console.log("disconnected socket io");
-    })
-})
+const PORT = process.env.PORT || 8000;
+server.listen(PORT, () => {
+	console.log(`Server is running on http://localhost:${PORT}`);
+});
