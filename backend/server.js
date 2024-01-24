@@ -18,7 +18,7 @@ const io = new Server(httpServer, {
 });
 
 io.on("connection", (socket) => {
-    console.log("Socket id is: ", socket.id);
+    console.log("New user connected ,id is: ", socket.id);
     console.log("Socket is active and connected.");
 
     socket.on("chat", (payload) => {
@@ -26,6 +26,13 @@ io.on("connection", (socket) => {
         io.emit("chat", payload);
     });
 });
+
+io.on("disconnect", (socket) => {
+    console.log("a user disconnected");
+    removeUser(socket.id);
+    io.emit("getActiveUsers", activeUsers);
+});
+
 
 app.get('/', (req, res) => {
     res.send("Hello, world!");
