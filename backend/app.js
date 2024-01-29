@@ -1,12 +1,12 @@
 import express from "express";
 import dotenv from "dotenv";
-import morgan from "morgan";
+import morgan from "morgan"; 
 import cors from "cors";
 
 import http from "http";
 import { Server as SocketIo } from "socket.io";
 
-import connectDB from "./config/db.js";
+// import connectDB from "./config/db.js";
 dotenv.config();
 
 const app = express();
@@ -19,7 +19,7 @@ const io = new SocketIo(server, {
 	},
 });
 
-connectDB();
+// connectDB();
 // app.set('view engine', 'ejs')
 app.use(morgan("dev"));
 app.use(
@@ -30,16 +30,10 @@ app.use(
 	})
 );
 
-app.get("/", async (req, res) => {
-	console.log("hi");
-	res.status(200).json({ message: "success" });
-});
 
 io.on("connection", (socket) => {
 	// console.log(socket);
 	console.log(`A user is connected. Socket ID: ${socket.id}`);
-	console.log(`WebSocket URL: ${socket.handshake.url}`);
-	console.log("A user is connected");
 
 	// Listen for messages from the client
 	socket.on("message", (data) => {

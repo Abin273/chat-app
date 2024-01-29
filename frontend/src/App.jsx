@@ -2,68 +2,81 @@ import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
 import "tailwindcss/tailwind.css"; // Import Tailwind CSS styles
 
-const socket = io("http://localhost:4000"); // Update with your server URL
+const socket = io("http://localhost:5000", {
+	withCredentials: true,
+	autoConnect: false,
+});
 
 function App() {
-	const [message, setMessage] = useState("");
+	const [currentMessage, setCurrentMessage] = useState("");
 	const [messages, setMessages] = useState([]);
 
 	useEffect(() => {
-		const socket = io("http://localhost:4000");
+		// Establish the connection when the component mounts
+		socket.connect();
 
-		socket.on("connect", () => {
-			console.log("WebSocket connected");
-		});
-
-		socket.on("message", (data) => {
-			setMessages((prevMessages) => [...prevMessages, data]);
-		});
-
-		// Clean up the socket connection on component unmount
+		// Clean up the connection when the component unmounts
 		return () => {
 			socket.disconnect();
 		};
 	}, []);
 
+	useEffect(() => {
+		const handleReceivedMessage = (data) => {
+			console.log("message", data);
+			setMessages((prevMessages) => [...prevMessages, data]);
+		};
+
+		// Add the event listener
+		socket.on("message", handleReceivedMessage);
+
+		// Clean up the event listener when the component unmounts
+		return () => {
+			socket.off("message", handleReceivedMessage);
+		};
+	}, []); // Empty dependency array ensures that this effect runs only once on mount
+
+	// Send a message to the server
 	const sendMessage = () => {
-		// Send a message to the server
-		socket.emit("message", { sender: "You", text: message });
-		setMessage("");
+		socket.emit("message", { sender: "You", text: currentMessage });
+		setCurrentMessage("");
 	};
 
 	return (
-		<div className="max-w-md mx-auto p-4 bg-white rounded shadow-md mt-8">
-			<h1 className="text-2xl font-bold mb-4">Socket.IO Chat App</h1>
-			<div className="border-t border-b border-gray-200 p-4 mb-4">
-				<ul>
-					{messages.map((msg, index) => (
-						<li
-							key={index}
-							className={`mb-2 ${
-								msg.sender === "You"
-									? "text-blue-500"
-									: "text-green-500"
-							}`}
-						>
-							<strong>{msg.sender}:</strong> {msg.text}
-						</li>
-					))}
-				</ul>
-			</div>
-			<div className="flex items-center">
-				<input
-					type="text"
-					className="flex-1 rounded-l p-2"
-					placeholder="Type your message..."
-					value={message}
-					onChange={(e) => setMessage(e.target.value)}
-				/>
-				<button
-					className="bg-blue-500 text-white p-2 rounded-r"
-					onClick={sendMessage}
-				>
-					Send
-				</button>
+		<div className="flex h-screen">
+			<div className="w-full bg-gray-200 px-24 ">
+				<h1 className="text-3xl font-bold mb-4">Socket.IO Chat App</h1>
+				<div className="h-96 overflow-y-auto border rounded p-4 bg-white">
+					<ul>
+						{messages.map((msg, index) => (
+							<li 
+								key={index}
+								className={`mb-2 ${
+									msg.sender === "You"
+										? "text-blue-500"
+										: "text-green-500"
+								}`}
+							>
+								<strong>{msg.sender}:</strong> {msg.text}
+							</li>
+						))}
+					</ul>
+				</div>
+				<div className="mt-4 flex">
+					<input
+						type="text"
+						className="flex-1 rounded-l p-2"
+						placeholder="Type your message..."
+						value={currentMessage}
+						onChange={(e) => setCurrentMessage(e.target.value)}
+					/>
+					<button
+						className="bg-blue-500 text-white p-2 rounded-r"
+						onClick={sendMessage}
+					>
+						Send
+					</button>
+				</div>
 			</div>
 		</div>
 	);
